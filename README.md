@@ -1,4 +1,4 @@
-# mock-http-api [![GoDoc](https://godoc.org/github.com/mkeeler/mock-http-api?status.svg)](https://pkg.go.dev/github.com/mkeeler/mock-http-api)
+# mock-http-api [![PkgGoDev](https://pkg.go.dev/badge/github.com/mkeeler/mock-http-api)](https://pkg.go.dev/github.com/mkeeler/mock-http-api)
 Go helpers for mocking an HTTP API using stretchr/testify/mock
 
 ## Code Generation
