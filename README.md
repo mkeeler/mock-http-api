@@ -27,7 +27,10 @@ func TestMyAPI(t *testing.T) {
    // This sets the call to be required to happen exactly once
    call.Once()
    
-   // This makes the HTTP request to the mock HTTP server
+   // This makes the HTTP request to the mock HTTP server. The mock api server exposes a URL()
+   // method which will return a string of the form http://<ip>:<port> that you can use to make requests.
+   // Typically this bit of code below would be replaced with invocation of some function that uses
+   // your API
 	resp, err := http.Get(fmt.Sprintf("%s/my/endpoint", m.URL()))
 	if err != nil {
 		t.Fatalf("Error issuing GET of /my/endpoint: %v", err)
