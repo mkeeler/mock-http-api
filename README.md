@@ -17,33 +17,33 @@ import (
 // This test will pass as all the requisite API calls are made.
 func TestMyAPI(t *testing.T) {
    m := mockapi.NewMockAPI(t)
-   
+      
    // This sets up an expectation that a GET request to /my/endpoint will be made and that it should
    // return a 200 status code with the provided map sent back JSON encoded as the body of the response
    call := m.WithJSONReply(mockapi.NewMockRequest("GET", "/my/endpoint"), 200, map[string]string{
       "foo": "bar",
    })
-   
+      
    // This sets the call to be required to happen exactly once
    call.Once()
-   
+      
    // This makes the HTTP request to the mock HTTP server. The mock api server exposes a URL()
    // method which will return a string of the form http://<ip>:<port> that you can use to make requests.
    // Typically this bit of code below would be replaced with invocation of some function that uses
    // your API
-	resp, err := http.Get(fmt.Sprintf("%s/my/endpoint", m.URL()))
-	if err != nil {
-		t.Fatalf("Error issuing GET of /my/endpoint: %v", err)
-	}
-
-	defer resp.Body.Close()
-	dec := json.NewDecoder(resp.Body)
-
-	var output map[string]string
-	if err := dec.Decode(&output); err != nil {
-		t.Fatalf("Error decoding response: %v", err)
+   resp, err := http.Get(fmt.Sprintf("%s/my/endpoint", m.URL()))
+   if err != nil {
+      t.Fatalf("Error issuing GET of /my/endpoint: %v", err)
    }
-   
+
+   defer resp.Body.Close()
+   dec := json.NewDecoder(resp.Body)
+
+   var output map[string]string
+   if err := dec.Decode(&output); err != nil {
+      t.Fatalf("Error decoding response: %v", err)
+   }
+      
    if val, ok := output["foo"]; !ok || val != "bar" {
       t.Fatalf("Didn't get the expected response")
    }
