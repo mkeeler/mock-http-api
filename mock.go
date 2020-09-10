@@ -2,6 +2,7 @@ package mockapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -178,7 +179,7 @@ func (m *MockAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ret := m.m.Called(r.Method, r.URL.Path, headers, params, body)
 
-	if replyFn, ok := ret.Get(0).(func(http.ResponseWriter, *http.Request)); ok {
+	if replyFn, ok := ret.Get(0).(MockResponse); ok {
 		replyFn(w, r)
 		return
 	}
@@ -225,6 +226,7 @@ func (m *MockAPI) WithJSONReply(req *MockRequest, status int, reply interface{})
 	return m.WithRequest(req, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 
+		fmt.Printf("reply: %v\n", reply)
 		if reply == nil {
 			return
 		}

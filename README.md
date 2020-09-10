@@ -1,6 +1,52 @@
 # mock-http-api [![PkgGoDev](https://pkg.go.dev/badge/github.com/mkeeler/mock-http-api)](https://pkg.go.dev/github.com/mkeeler/mock-http-api)
 Go helpers for mocking an HTTP API using stretchr/testify/mock
 
+## Library Usage
+
+```go
+package mock_test
+
+import (
+   "encoding/json"
+   "net/http"
+   "testing"
+   
+   mockapi "github.com/mkeeler/mock-http-api"
+)
+
+// This test will pass as all the requisite API calls are made.
+func TestMyAPI(t *testing.T) {
+   m := mockapi.NewMockAPI(t)
+   
+   // This sets up an expectation that a GET request to /my/endpoint will be made and that it should
+   // return a 200 status code with the provided map sent back JSON encoded as the body of the response
+   call := m.WithJSONReply(mockapi.NewMockRequest("GET", "/my/endpoint"), 200, map[string]string{
+      "foo": "bar",
+   })
+   
+   // This sets the call to be required to happen exactly once
+   call.Once()
+   
+   // This makes the HTTP request to the mock HTTP server
+	resp, err := http.Get(fmt.Sprintf("%s/my/endpoint", m.URL()))
+	if err != nil {
+		t.Fatalf("Error issuing GET of /my/endpoint: %v", err)
+	}
+
+	defer resp.Body.Close()
+	dec := json.NewDecoder(resp.Body)
+
+	var output map[string]string
+	if err := dec.Decode(&output); err != nil {
+		t.Fatalf("Error decoding response: %v", err)
+   }
+   
+   if val, ok := output["foo"]; !ok || val != "bar" {
+      t.Fatalf("Didn't get the expected response")
+   }
+}
+```
+
 ## Code Generation
 
 The code generator will create a new mock API type with helper methods for all the desired endpoints. These helpers
@@ -89,6 +135,7 @@ func TestFakeAPI(t *testing.T) {
    // nothing else is necessary. Either the deferred m.Close or the automatic testing cleanup 
    // will assert that the required API calls were made.
 }
+```
  
 #### Full Usage
 
