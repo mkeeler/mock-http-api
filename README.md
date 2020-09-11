@@ -17,6 +17,12 @@ import (
 // This test will pass as all the requisite API calls are made.
 func TestMyAPI(t *testing.T) {
    m := mockapi.NewMockAPI(t)
+
+   // http.Get will add both of the headers but we don't want to care about them.
+   m.SetFilteredHeaders([]string{
+      "Accept-Encoding",
+      "User-Agent",
+   })
       
    // This sets up an expectation that a GET request to /my/endpoint will be made and that it should
    // return a 200 status code with the provided map sent back JSON encoded as the body of the response
