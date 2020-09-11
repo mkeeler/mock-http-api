@@ -150,10 +150,11 @@ func New{{.}}(t mockapi.TestingT) *{{.}} {
 
 {{ template "imports" }}
 
-{{ template "mock-type" .Receiver}}
+{{with $receiver := .Receiver }}
+{{ template "mock-type" $receiver }}
 {{ range .Endpoints }}
 
-func (m *MockConsulAPI) {{.Name}}(
+func (m *{{.Receiver}}) {{.Name}}(
 	{{- template "path-parameters" .Spec.PathParameters -}}
 	{{- template "request-headers" .Spec.Headers -}}
 	{{- template "query-params" .Spec.QueryParams -}}
@@ -161,6 +162,7 @@ func (m *MockConsulAPI) {{.Name}}(
 	{{- template "reply" .Spec.ResponseType}}) *mockapi.MockAPICall {
 {{ template "endpoint-func-body" . }}
 }
+{{- end -}}
 {{- end -}}
 `
 )
