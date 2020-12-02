@@ -6,11 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
-	"html/template"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
+	"text/template"
 
 	mockapi "github.com/mkeeler/mock-http-api"
 )
@@ -42,8 +42,12 @@ package {{ . }}
 	tplImports = `
 {{- define "imports" -}}
 import (
-   "fmt"
-   mockapi "github.com/mkeeler/mock-http-api"
+	 "fmt"
+	 mockapi "github.com/mkeeler/mock-http-api"
+
+	 {{ range . -}}
+	 {{ . }}
+	 {{ end }}
 )
 {{- end -}}
 `
@@ -56,13 +60,17 @@ import (
 
 	tplReply = `
 {{- define "reply" -}}
-{{- if eq . "json" -}}
+{{- if eq .ResponseFormat "json" -}}
+	{{- if .ResponseType -}}
+status int, reply {{ .ResponseType }}
+	{{- else -}}
 status int, reply interface{}
-{{- else if eq . "string" -}}
+  {{- end -}}
+{{- else if eq .ResponseFormat "string" -}}
 status int, reply string
-{{- else if eq . "stream" -}}
+{{- else if eq .ResponseFormat "stream" -}}
 status int, reply io.Reader
-{{- else if eq . "func" -}}
+{{- else if eq .ResponseFormat "func" -}}
 reply mockapi.MockResponse
 {{- else -}}
 status int
@@ -88,9 +96,13 @@ headers map[string]string,
 
 	tplBody = `
 {{- define "body" -}}
-{{- if eq . "json" -}}
+{{- if eq .BodyFormat "json" -}}
+	{{- if .BodyType -}}
+body {{ .BodyType }},
+	{{- else -}}
 body map[string]interface{},
-{{- else if or (eq . "string") (eq . "stream") -}}
+	{{- end -}}
+{{- else if or (eq .BodyFormat "string") (eq .BodyFormat "stream") -}}
 body []byte,
 {{- end -}}
 {{- end -}}
@@ -119,7 +131,7 @@ func New{{.}}(t mockapi.TestingT) *{{.}} {
    "{{.Spec.Path}}"
    {{- end -}}
    )
-   {{- if and (ne .Spec.BodyType "none") (ne .Spec.BodyType "") -}}
+   {{- if and (ne .Spec.BodyFormat "none") (ne .Spec.BodyFormat "") -}}
       .WithBody(body)
    {{- end -}}
    {{- if .Spec.QueryParams -}}
@@ -128,15 +140,15 @@ func New{{.}}(t mockapi.TestingT) *{{.}} {
    {{- if .Spec.Headers -}}
       .WithHeaders(headers)
    {{- end }}
-   {{ if eq .Spec.ResponseType "json" }}
+   {{ if eq .Spec.ResponseFormat "json" }}
    return m.WithJSONReply(req, status, reply)
-   {{- else if eq .Spec.ResponseType "string" }}
+   {{- else if eq .Spec.ResponseFormat "string" }}
    return m.WithTextReply(req, status, reply)
-   {{- else if eq .Spec.ResponseType "stream" }}
+   {{- else if eq .Spec.ResponseFormat "stream" }}
    return m.WithStreamingReply(req, status, reply)
-   {{- else if eq .Spec.ResponseType "func" }}
+   {{- else if eq .Spec.ResponseFormat "func" }}
    return m.WithRequest(req, reply)
-   {{- else if or (eq .Spec.ResponseType "none") (eq .Spec.ResponseType "") }}
+   {{- else if or (eq .Spec.ResponseFormat "none") (eq .Spec.ResponseFormat "") }}
    return m.WithNoResponseBody(req, status)
    {{- end}}
 {{- end -}}
@@ -148,7 +160,7 @@ func New{{.}}(t mockapi.TestingT) *{{.}} {
 
 {{ template "package" .Package }}
 
-{{ template "imports" }}
+{{ template "imports" .Imports }}
 
 {{ $receiver := .Receiver }}
 {{ template "mock-type" $receiver }}
@@ -158,8 +170,8 @@ func (m *{{ $receiver }}) {{.Name}}(
 	{{- template "path-parameters" .Spec.PathParameters -}}
 	{{- template "request-headers" .Spec.Headers -}}
 	{{- template "query-params" .Spec.QueryParams -}}
-	{{- template "body" .Spec.BodyType}}
-	{{- template "reply" .Spec.ResponseType}}) *mockapi.MockAPICall {
+	{{- template "body" .Spec }}
+	{{- template "reply" .Spec }}) *mockapi.MockAPICall {
 {{ template "endpoint-func-body" . }}
 }
 {{- end -}}
@@ -176,6 +188,7 @@ type tplArgs struct {
 	Package   string
 	BuildTags []string
 	Receiver  string
+	Imports   []string
 	Endpoints []tplEndpoint
 }
 
@@ -268,10 +281,15 @@ func parseCLIFlags() config {
 	return cfg
 }
 
+type inputData struct {
+	Imports   map[string]string           `json:"imports"`
+	Endpoints map[string]mockapi.Endpoint `json:"endpoints"`
+}
+
 func main() {
 	cfg := parseCLIFlags()
 
-	var endpoints map[string]mockapi.Endpoint
+	var input inputData
 
 	data, err := ioutil.ReadFile(cfg.input)
 	if err != nil {
@@ -279,7 +297,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = json.Unmarshal(data, &endpoints)
+	err = json.Unmarshal(data, &input)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load JSON from input data file %q: %v\n", cfg.input, err)
 		os.Exit(1)
@@ -292,7 +310,7 @@ func main() {
 		Receiver:  cfg.receiver,
 	}
 
-	for name, spec := range endpoints {
+	for name, spec := range input.Endpoints {
 		args.Endpoints = append(args.Endpoints, tplEndpoint{
 			Name: name,
 			Spec: spec,
@@ -303,6 +321,19 @@ func main() {
 	sort.Slice(args.Endpoints, func(i, j int) bool {
 		return args.Endpoints[i].Name < args.Endpoints[j].Name
 	})
+
+	fmt.Println(input.Imports)
+	for pkgName, path := range input.Imports {
+		var importPath string
+		if strings.HasSuffix(path, "/"+pkgName) {
+			importPath = fmt.Sprintf(`"%s"`, path)
+		} else {
+			importPath = fmt.Sprintf(`%s "%s"`, pkgName, path)
+		}
+		args.Imports = append(args.Imports, importPath)
+	}
+	sort.Strings(args.Imports)
+	fmt.Println(args.Imports)
 
 	tpl := parseTemplate()
 
@@ -317,6 +348,10 @@ func main() {
 	formatted, err := format.Source(src)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to format rendered source: %v\n", err)
+		if err := ioutil.WriteFile(cfg.output, src, 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to write generated source to file %s: %v\n", cfg.output, err)
+			os.Exit(1)
+		}
 		os.Exit(1)
 	}
 

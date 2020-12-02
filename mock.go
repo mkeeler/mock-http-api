@@ -217,7 +217,7 @@ func (m *MockAPI) WithNoResponseBody(req *MockRequest, status int) *MockAPICall 
 	})
 }
 
-// WithTxtReply will setup an expectation for an API call to be made. The supplied status code will
+// WithJSONReply will setup an expectation for an API call to be made. The supplied status code will
 // be use for the responses reply and the reply object will be JSON encoded and written to the response. If there is
 // an error in JSON encoding it will fail the test object passed into the NewMockAPI constructor if that
 // was non-nil and if it was nil, will panic. The method, path and body parameters are the same as for
@@ -241,9 +241,9 @@ func (m *MockAPI) WithJSONReply(req *MockRequest, status int, reply interface{})
 	})
 }
 
-// WithTxtReply will setup an expectation for an API call to be made. The supplied status code will
+// WithTextReply will setup an expectation for an API call to be made. The supplied status code will
 // be use for the responses reply and the reply string will be written to the response.
-func (m *MockAPI) WithTxtReply(req *MockRequest, status int, reply string) *MockAPICall {
+func (m *MockAPI) WithTextReply(req *MockRequest, status int, reply string) *MockAPICall {
 	return m.WithRequest(req, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(reply))
