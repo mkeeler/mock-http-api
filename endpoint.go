@@ -1,21 +1,21 @@
 package mockapi
 
-type BodyType string
+type BodyFormat string
 
 const (
-	BodyTypeNone   BodyType = "none"
-	BodyTypeJSON   BodyType = "json"
-	BodyTypeString BodyType = "string"
-	BodyTypeStream BodyType = "stream"
+	BodyFormatNone   BodyFormat = "none"
+	BodyFormatJSON   BodyFormat = "json"
+	BodyFormatString BodyFormat = "string"
+	BodyFormatStream BodyFormat = "stream"
 )
 
-type ResponseType string
+type ResponseFormat string
 
 const (
-	ResponseTypeJSON   ResponseType = "json"
-	ResponseTypeString ResponseType = "string"
-	ResponseTypeStream ResponseType = "stream"
-	ResponseTypeFunc   ResponseType = "func"
+	ResponseFormatJSON   ResponseFormat = "json"
+	ResponseFormatString ResponseFormat = "string"
+	ResponseFormatStream ResponseFormat = "stream"
+	ResponseFormatFunc   ResponseFormat = "func"
 )
 
 // Endpoint represents an HTTP endpoint to be mocked.
@@ -26,12 +26,17 @@ type Endpoint struct {
 	Path string
 	// Method is the HTTP Method used to invoke this API
 	Method string
-	// BodyType is what type of body to take as input
-	BodyType BodyType
+	// BodyFormat is what format of body to take as input
+	BodyFormat BodyFormat
+	// BodyType is the golang type of the Body
+	BodyType string
+
 	// PathParameters are the parameters required to be in the path
 	PathParameters []string
-	// ResponseType is the type of Response that helpers should
-	ResponseType ResponseType
+	// ResponseFormat is the format of Response that helpers should
+	ResponseFormat ResponseFormat
+	// ResponseType is the golang type of the Response
+	ResponseType string
 	// Headers indicates that this endpoints operation is influenced by
 	// headers which may be present and so the headers should be a part
 	// of the expectation
