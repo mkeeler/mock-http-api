@@ -75,21 +75,23 @@ _Note that you may need to run this command with GO111MODULE=on if executing out
 mock-api-gen -type MockMyAPI -endpoints ./endpoints.json -pkg myapi -output api.helpers.go
 ```
 
-This command will take in the JSON file of endpoints and generate the desired type with helpers for mocking responses to each API.
+This command will take in the JSON file of endpoints and generate the desired type with helpers for mocking responses to each API. See [endpoint options](#endpoint-options) to view the list of available options to configure mocked endpoints.
 
 The format of the endpoints file is:
 
 ```json
 {
-   "UpdateResource": {
+  "Endpoints": {
+    "UpdateResource": {
       "Method": "POST",
       "Path": "/resource/%s",
       "PathParameters": ["resourceID"],
-      "BodyType": "json",
-      "ResponseType": "json",
+      "BodyFormat": "json",
+      "ResponseFormat": "json",
       "Headers": true,
       "QueryParams": false
-   }
+    }
+  }
 }
 ```
 
@@ -124,7 +126,7 @@ func (m *MockConsulAPI) UpdateResource(resourceID string, headers map[string]str
 
 Then when you want to use this you would:
 
-```
+```go
 func TestFakeAPI(t *testing.T) {
    m := fakeapi.NewMockAPI(t)
    
@@ -145,7 +147,42 @@ func TestFakeAPI(t *testing.T) {
    // will assert that the required API calls were made.
 }
 ```
- 
+
+#### Endpoint Options
+Endpoint options for generating method signatures:
+
+| Argument | Type | Description |
+| - | - | - |
+| Method | `string` | The HTTP method for the endpoint. |
+| Path | `string` | The path of the endpoint. Include string format verbs to represent path parameters (`/v1/resource/%s`).
+| PathParameters | `[]string` | List of path parameters of the endpoint. |
+| BodyFormat | `string` | The format of the body expected for the HTTP request. For example, none, json, string, stream. |
+| BodyType | `string` | A string describing the go type for the method signature to include the typed representation of the request body. The default type is `map[string]interface{}`. Custom types from other packages, like `*api.Resource`, are supported. This requires the package to be specified in order to be properly imported. See [import options](#import-options) for more information. |
+| QueryParams | `bool` | This includes the option for mocking API query params in the method signature with the type `map[string]string`. |
+| Headers | `bool` | This includes the option for HTTP headers for the request in the method signature with the type `map[string]string`. |
+| ResponseFormat | `string` | The format of the response body returned: none, json, string, stream, func. |
+| ResponseType | `string` | A string describing the go type for the method signature to include the typed representation of the response body. The default type is `interface{}`. Custom types from other packages, like `*api.Resource`, are supported. This requires the package to be specified in order to be properly imported. See [import options](#import-options) for more information. |
+
+#### Import Options
+
+To include custom types in the method signature for strict type checking, specify the import package in the endpoints file.
+
+```json
+{
+  "Imports": {
+    "api": "github.com/namespace/project/path/api"
+  },
+  "Endpoints": {
+    "ListResource": {
+      "Method": "GET",
+      "Path": "/resources",
+      "ResponseFormat": "json",
+      "ResponseType": "[]*api.Resource"
+    }
+  }
+}
+```
+
 #### Full Usage
 
 ```
